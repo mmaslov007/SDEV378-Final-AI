@@ -83,10 +83,10 @@ brew install tesseract
 sudo apt-get install tesseract-ocr
 ```
 
-Run the app:
+Run the app from the project virtual environment:
 
 ```powershell
-streamlit run app.py
+.\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
 The first semantic retrieval run may download the `sentence-transformers/all-MiniLM-L6-v2` model. Tesseract OCR is optional but recommended for images and scanned PDFs. If it is not installed, the app still supports pasted text and selectable PDF text.
@@ -103,7 +103,7 @@ python -m compileall study_assistant tests app.py
 Run the Streamlit app:
 
 ```powershell
-streamlit run app.py
+.\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
 The app displays component status in the sidebar:
