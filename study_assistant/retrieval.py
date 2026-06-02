@@ -241,10 +241,16 @@ def build_index(
     else:
         store = InMemoryVectorStore()
 
-    store.add_chunks(chunks)
-
-    if query_hint and chunks:
-        store.query(query_hint, limit=1)
+    try:
+        store.add_chunks(chunks)
+        if query_hint and chunks:
+            store.query(query_hint, limit=1)
+    except Exception as exc:
+        if not isinstance(store, ChromaVectorStore):
+            raise
+        warnings.append(f"Chroma pipeline failed, using in-memory fallback: {exc}")
+        store = InMemoryVectorStore()
+        store.add_chunks(chunks)
 
     return store, chunks, warnings
 

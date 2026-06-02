@@ -53,6 +53,27 @@ streamlit run app.py
 
 Tesseract OCR is optional but recommended for images and scanned PDFs. If it is not installed, the app still supports pasted text and selectable PDF text.
 
+## Validation
+
+Run the dependency-light checks:
+
+```powershell
+python -m unittest discover -s tests
+python -m compileall study_assistant tests app.py
+```
+
+Run the Streamlit app:
+
+```powershell
+streamlit run app.py
+```
+
+The app displays component status in the sidebar:
+
+- OCR is available only when local Tesseract is installed.
+- Retrieval uses ChromaDB and MiniLM when the full requirements are installed; otherwise it falls back to an in-memory hashing index.
+- Generation uses Groq when `GROQ_API_KEY` is configured; otherwise it shows source-grounded fallback study prompts.
+
 ## Demo Material
 
 Use `sample_materials/sdev378_ai_study_notes.txt` for a reliable local demo without needing external files.
