@@ -96,8 +96,9 @@ The first semantic retrieval run may download the `sentence-transformers/all-Min
 Run the dependency-light checks:
 
 ```powershell
-python -m unittest discover -s tests
-python -m compileall study_assistant tests app.py
+.\.venv\Scripts\python.exe -m unittest discover -s tests
+.\.venv\Scripts\python.exe -m compileall study_assistant tests app.py
+.\.venv\Scripts\python.exe scripts\check_setup.py
 ```
 
 Run the Streamlit app:
@@ -111,6 +112,23 @@ The app displays component status in the sidebar:
 - OCR is available only when local Tesseract is installed.
 - Retrieval uses ChromaDB and MiniLM when the full requirements are installed; otherwise it falls back to an in-memory hashing index.
 - Generation uses Groq when `GROQ_API_KEY` is configured; otherwise it shows source-grounded fallback study prompts.
+
+## Troubleshooting
+
+If the app says `PyMuPDF is not installed`, it is running from the wrong Python environment. Stop any old Streamlit servers, then launch with the virtual environment command:
+
+```powershell
+Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*streamlit*app.py*' -and $_.ProcessId -ne $PID } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+.\.venv\Scripts\python.exe -m streamlit run app.py
+```
+
+If OCR still says unavailable after installing Tesseract, run:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\check_setup.py
+```
+
+Then set `TESSERACT_CMD` in `.env` if needed.
 
 ## Demo Material
 

@@ -12,6 +12,10 @@ from typing import Any
 
 TEXT_EXTENSIONS = {".txt", ".md", ".markdown", ".csv"}
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
+COMMON_TESSERACT_PATHS = (
+    Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe"),
+    Path(r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe"),
+)
 
 
 @dataclass(slots=True)
@@ -47,7 +51,13 @@ def get_tesseract_command() -> str | None:
     configured_path = os.getenv("TESSERACT_CMD", "").strip()
     if configured_path:
         return configured_path if Path(configured_path).exists() else shutil.which(configured_path)
-    return shutil.which("tesseract")
+    path_command = shutil.which("tesseract")
+    if path_command:
+        return path_command
+    for candidate in COMMON_TESSERACT_PATHS:
+        if candidate.exists():
+            return str(candidate)
+    return None
 
 
 def is_tesseract_available() -> bool:
