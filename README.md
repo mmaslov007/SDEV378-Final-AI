@@ -30,19 +30,57 @@ This project is built for the SDEV378 Applied AI final project standard: a funct
 5. Generate study output using retrieved snippets.
 6. Answer quiz questions and review explanations tied back to source text.
 
-## Quick Start
+## Setup From GitHub
+
+Clone the repository and enter the project folder:
+
+```powershell
+git clone https://github.com/mmaslov007/SDEV378-Final-AI.git
+cd SDEV378-Final-AI
+```
+
+Create and activate a virtual environment:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Create your local environment file:
+
+```powershell
 copy .env.example .env
 ```
 
-Add your Groq API key to `.env`:
+Add your Groq API key to `.env`. Never commit this file:
 
 ```text
 GROQ_API_KEY=your_key_here
+```
+
+Install Tesseract OCR for image uploads and scanned PDFs. On Windows, use one of these package-manager options:
+
+```powershell
+winget install --id tesseract-ocr.tesseract --exact --accept-source-agreements --accept-package-agreements
+```
+
+```powershell
+choco install tesseract -y
+```
+
+Close and reopen PowerShell after installing Tesseract so PATH refreshes. If OCR still shows as unavailable, set the executable path in `.env`:
+
+```text
+TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
+```
+
+For macOS or Linux:
+
+```bash
+brew install tesseract
+sudo apt-get install tesseract-ocr
 ```
 
 Run the app:
@@ -51,7 +89,7 @@ Run the app:
 streamlit run app.py
 ```
 
-Tesseract OCR is optional but recommended for images and scanned PDFs. If it is not installed, the app still supports pasted text and selectable PDF text.
+The first semantic retrieval run may download the `sentence-transformers/all-MiniLM-L6-v2` model. Tesseract OCR is optional but recommended for images and scanned PDFs. If it is not installed, the app still supports pasted text and selectable PDF text.
 
 ## Validation
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import os
 from pathlib import Path
 import re
 import shutil
@@ -42,8 +43,16 @@ def normalize_text(text: str) -> str:
     return "\n".join(lines).strip()
 
 
+def get_tesseract_command() -> str | None:
+    configured_path = os.getenv("TESSERACT_CMD", "").strip()
+    if configured_path:
+        return configured_path if Path(configured_path).exists() else shutil.which(configured_path)
+    return shutil.which("tesseract")
+
+
 def is_tesseract_available() -> bool:
-    return shutil.which("tesseract") is not None
+    command = get_tesseract_command()
+    return bool(command and Path(command).exists())
 
 
 def extract_from_plain_text(text: str, source_name: str = "pasted notes") -> ExtractedDocument:
@@ -166,6 +175,7 @@ def _ocr_pdf_page(page: Any) -> str:
     except ImportError:
         return ""
 
+    _configure_pytesseract(pytesseract)
     pixmap = page.get_pixmap(dpi=200)
     mode = "RGBA" if pixmap.alpha else "RGB"
     image = Image.frombytes(mode, [pixmap.width, pixmap.height], pixmap.samples)
@@ -197,6 +207,7 @@ def _extract_image(file_name: str, content: bytes) -> ExtractedDocument:
             metadata={"ocr_available": True},
         )
 
+    _configure_pytesseract(pytesseract)
     image = Image.open(BytesIO(content))
     text = normalize_text(pytesseract.image_to_string(image))
     if not text:
@@ -209,3 +220,9 @@ def _extract_image(file_name: str, content: bytes) -> ExtractedDocument:
         warnings=warnings,
         metadata={"ocr_available": True, "characters": len(text)},
     )
+
+
+def _configure_pytesseract(pytesseract_module: Any) -> None:
+    command = get_tesseract_command()
+    if command:
+        pytesseract_module.pytesseract.tesseract_cmd = command

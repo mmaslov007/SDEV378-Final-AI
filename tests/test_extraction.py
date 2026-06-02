@@ -3,6 +3,7 @@ import unittest
 from study_assistant.extraction import (
     extract_from_bytes,
     extract_from_plain_text,
+    get_tesseract_command,
     is_tesseract_available,
     normalize_text,
 )
@@ -37,6 +38,11 @@ class ExtractionTests(unittest.TestCase):
 
     def test_tesseract_probe_returns_boolean(self):
         self.assertIsInstance(is_tesseract_available(), bool)
+
+    def test_tesseract_command_probe_returns_string_or_none(self):
+        command = get_tesseract_command()
+
+        self.assertTrue(command is None or isinstance(command, str))
 
 
 if __name__ == "__main__":
