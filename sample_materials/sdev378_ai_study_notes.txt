@@ -1,0 +1,11 @@
+Applied AI systems often combine multiple machine learning components. A single language model can generate text, but it cannot automatically see a screen, read a scanned handout, or search a private collection of documents unless other software and models provide that context.
+
+Optical character recognition, or OCR, turns images of text into readable strings. OCR can fail when an image is blurry, rotated, low contrast, or laid out in unusual tables. A good application should preview OCR output so users can notice and correct mistakes.
+
+Embeddings convert text into numeric vectors that preserve semantic meaning. Similar ideas tend to have vectors that are close together. A vector database can search those embeddings and retrieve source chunks that are relevant to a user's topic or question.
+
+Retrieval-augmented generation combines search with language model generation. The application first retrieves source snippets, then asks the language model to answer or generate study content using those snippets. This reduces hallucinations because the model has specific evidence to use.
+
+GroqCloud hosts fast language model inference. In a student project, a hosted model can provide low-latency quiz generation while local tools handle extraction and retrieval. A rate limit or missing API key should not break the whole application; the app can still display retrieved snippets.
+
+A strong final project proof of concept should look reasonable, work on the happy path, and show multiple AI components working together in a meaningful way. Each component should have a clear input, output, runtime location, and failure mode.

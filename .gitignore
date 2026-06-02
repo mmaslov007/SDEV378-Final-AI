@@ -1,0 +1,21 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local app/runtime state
+.streamlit/secrets.toml
+.chroma/
+chroma_store/
+uploads/
+exports/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
