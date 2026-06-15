@@ -1,5 +1,6 @@
 """Streamlit entry point for the AI Study Assistant."""
 
+import random
 from pathlib import Path
 
 import streamlit as st
@@ -9,6 +10,7 @@ from study_assistant.config import load_config
 from study_assistant.extraction import ExtractedDocument, extract_from_bytes, extract_from_plain_text, is_tesseract_available
 from study_assistant.generation import StudyItem, StudyOutput, generate_study_output
 from study_assistant.retrieval import SearchResult, build_index
+from study_assistant import ui
 
 
 SAMPLE_PATH = Path("sample_materials/sdev378_ai_study_notes.txt")
@@ -17,30 +19,43 @@ MODE_LABELS = {"quiz": "Quiz", "flashcards": "Flashcards", "explanation": "Expla
 
 def main() -> None:
     st.set_page_config(
-        page_title="AI Study Assistant",
-        layout="wide",
-        initial_sidebar_state="expanded",
+        page_title="StudyAI — AI Study Assistant",
+        layout="centered",
+        initial_sidebar_state="collapsed",
     )
+    ui.inject_global_styles()
     _initialize_state()
     config = load_config()
 
-    st.title("AI Study Assistant")
-    st.caption("Source-grounded quizzes, flashcards, and explanations from your study material.")
+    # Landing page: sticky nav (with live status) + hero
+    ui.render_nav(_status_items(config))
+    ui.anchor("home")
+    ui.render_hero()
 
-    settings = _render_sidebar(config)
-
-    input_column, pipeline_column = st.columns([1.1, 0.9], gap="large")
-    with input_column:
+    # Step-by-step workflow, centered and scrollable
+    ui.anchor("material")
+    with st.container(border=True):
         _render_input_panel()
+
+    ui.anchor("preview")
+    with st.container(border=True):
         _render_preview_panel()
 
-    with pipeline_column:
+    ui.anchor("configure")
+    with st.container(border=True):
+        settings = _render_config_panel()
+
+    ui.anchor("generate")
+    with st.container(border=True):
         _render_pipeline_panel(settings, config)
 
     output = st.session_state.get("study_output")
     if output:
-        st.divider()
-        _render_output(output)
+        ui.anchor("results")
+        with st.container(border=True):
+            _render_output(output)
+
+    ui.render_footer()
 
 
 def _initialize_state() -> None:
@@ -58,30 +73,43 @@ def _initialize_state() -> None:
         st.session_state.setdefault(key, value)
 
 
-def _render_sidebar(config) -> dict[str, str | int | bool]:
-    with st.sidebar:
-        st.header("Settings")
-        mode = st.segmented_control(
-            "Mode",
-            ["quiz", "flashcards", "explanation", "qa"],
-            default="quiz",
-            format_func=lambda value: MODE_LABELS.get(value, value),
-        )
-        topic = st.text_input("Topic", placeholder="retrieval, OCR, final project standards")
-        difficulty = st.selectbox("Difficulty", ["easy", "medium", "hard"], index=1)
-        count = st.slider("Items", min_value=1, max_value=8, value=4)
-        retrieve_count = st.slider("Source snippets", min_value=1, max_value=8, value=4)
-        chunk_size = st.slider("Chunk size", min_value=80, max_value=320, value=180, step=20)
-        overlap = st.slider("Chunk overlap", min_value=0, max_value=80, value=35, step=5)
-        prefer_chroma = st.toggle("Use ChromaDB", value=True)
+def _status_items(config) -> list[tuple[str, str, str]]:
+    ocr_ok = is_tesseract_available()
+    llm_ok = bool(config.groq_api_key)
+    backend = st.session_state.get("index_backend")
+    return [
+        ("OCR", "ready" if ocr_ok else "off", "ok" if ocr_ok else "off"),
+        ("LLM", "ready" if llm_ok else "off", "ok" if llm_ok else "off"),
+        ("Model", config.groq_model, "neutral"),
+        ("Retrieval", backend or "not built", "ok" if backend else "off"),
+    ]
 
-        st.divider()
-        st.subheader("Component Status")
-        st.write(f"OCR: {'available' if is_tesseract_available() else 'not installed'}")
-        st.write(f"LLM: {'configured' if config.groq_api_key else 'waiting for GROQ_API_KEY'}")
-        st.write(f"Model: `{config.groq_model}`")
-        backend = st.session_state.get("index_backend") or "not built"
-        st.write(f"Retrieval: {backend}")
+
+def _render_config_panel() -> dict[str, str | int | bool]:
+    ui.section_header("⚙️", "Configure", "Step 3 · Choose your study mode and tuning")
+    mode = st.segmented_control(
+        "Mode",
+        ["quiz", "flashcards", "explanation", "qa"],
+        default="quiz",
+        format_func=lambda value: MODE_LABELS.get(value, value),
+    )
+
+    top_left, top_mid, top_right = st.columns(3)
+    with top_left:
+        topic = st.text_input("Topic", placeholder="retrieval, OCR, final project")
+    with top_mid:
+        difficulty = st.selectbox("Difficulty", ["easy", "medium", "hard"], index=1)
+    with top_right:
+        count = st.slider("Items", min_value=1, max_value=8, value=4)
+
+    with st.expander("Advanced retrieval settings", expanded=False):
+        adv_left, adv_right = st.columns(2)
+        with adv_left:
+            retrieve_count = st.slider("Source snippets", min_value=1, max_value=8, value=4)
+            chunk_size = st.slider("Chunk size", min_value=80, max_value=320, value=180, step=20)
+        with adv_right:
+            overlap = st.slider("Chunk overlap", min_value=0, max_value=80, value=35, step=5)
+            prefer_chroma = st.toggle("Use ChromaDB", value=True)
 
     return {
         "mode": mode or "quiz",
@@ -96,16 +124,16 @@ def _render_sidebar(config) -> dict[str, str | int | bool]:
 
 
 def _render_input_panel() -> None:
-    st.subheader("Material")
+    ui.section_header("📥", "Material", "Step 1 · Upload a file or paste your notes")
     uploaded_file = st.file_uploader(
         "Upload",
         type=["pdf", "docx", "png", "jpg", "jpeg", "txt", "md", "csv"],
     )
-    pasted_text = st.text_area("Paste", height=180, placeholder="Paste notes, slides text, or a reading excerpt.")
+    pasted_text = st.text_area("Paste", height=100, placeholder="Paste notes, slides text, or a reading excerpt.")
 
     button_column_1, button_column_2 = st.columns(2)
     with button_column_1:
-        if st.button("Extract Material", use_container_width=True):
+        if st.button("Extract Material", use_container_width=True, type="primary"):
             _extract_material(uploaded_file, pasted_text)
     with button_column_2:
         if st.button("Load Sample", use_container_width=True):
@@ -147,6 +175,7 @@ def _store_extraction(document: ExtractedDocument) -> None:
 
 
 def _render_preview_panel() -> None:
+    ui.section_header("👁️", "Preview", "Step 2 · Review extracted text and detected topics")
     document: ExtractedDocument | None = st.session_state.get("extracted_doc")
     if document:
         metric_columns = st.columns(3)
@@ -159,17 +188,20 @@ def _render_preview_panel() -> None:
     tags: DocumentTags | None = st.session_state.get("doc_tags")
     if tags and tags.has_topics:
         method = "AI" if tags.used_llm else "auto"
-        st.caption(f"Detected topics ({method}): " + " · ".join(tags.topics))
-        st.caption(f"Suggested difficulty: {tags.difficulty}")
+        ui.chips(f"Topics · {method}", tags.topics)
+        ui.chips("Difficulty", [tags.difficulty])
 
-    st.text_area("Preview", key="text_preview", height=260)
+    if not document:
+        ui.empty_hint("Nothing extracted yet", "Upload a file or load the sample, then press Extract Material.")
+
+    st.text_area("Extracted text", key="text_preview", height=260, label_visibility="collapsed")
 
 
 def _render_pipeline_panel(settings: dict[str, str | int | bool], config) -> None:
-    st.subheader("Pipeline")
+    ui.section_header("⚡", "Generate", "Step 4 · Build the index, then create your study set")
 
     build_disabled = not bool(st.session_state.get("text_preview", "").strip())
-    if st.button("Build Search Index", disabled=build_disabled, use_container_width=True):
+    if st.button("Build Search Index", disabled=build_disabled, use_container_width=True, type="primary"):
         _build_search_index(settings, config)
 
     chunks = st.session_state.get("chunks", [])
@@ -185,17 +217,21 @@ def _render_pipeline_panel(settings: dict[str, str | int | bool], config) -> Non
         st.warning(warning)
 
     generate_disabled = not bool(results)
-    if st.button("Generate Study Set", disabled=generate_disabled, use_container_width=True):
-        output = generate_study_output(
-            mode=str(settings["mode"]),
-            topic=str(settings["topic"]),
-            results=results,
-            count=int(settings["count"]),
-            difficulty=str(settings["difficulty"]),
-            api_key=config.groq_api_key,
-            model=config.groq_model,
-        )
+    if st.button("Generate Study Set", disabled=generate_disabled, use_container_width=True, type="primary"):
+        with st.spinner("Generating your study set…"):
+            output = generate_study_output(
+                mode=str(settings["mode"]),
+                topic=str(settings["topic"]),
+                results=results,
+                count=int(settings["count"]),
+                difficulty=str(settings["difficulty"]),
+                api_key=config.groq_api_key,
+                model=config.groq_model,
+            )
         st.session_state.study_output = output
+
+    if generate_disabled and not chunks:
+        ui.empty_hint("No index yet", "Build a search index above to unlock generation.")
 
     if results:
         with st.expander("Retrieved source snippets", expanded=False):
@@ -234,11 +270,11 @@ def _detected_topic_query() -> str:
 
 
 def _render_output(output: StudyOutput) -> None:
-    st.subheader(output.title)
+    ui.section_header("🎓", output.title, "Step 5 · Your generated study set")
     status_columns = st.columns(3)
-    status_columns[0].metric("Mode", output.mode)
+    status_columns[0].metric("Mode", MODE_LABELS.get(output.mode, output.mode))
     status_columns[1].metric("Items", len(output.items))
-    status_columns[2].metric("LLM", "used" if output.used_llm else "fallback")
+    status_columns[2].metric("Generation", "AI" if output.used_llm else "fallback")
 
     for warning in output.warnings:
         st.warning(warning)
@@ -254,25 +290,52 @@ def _render_output(output: StudyOutput) -> None:
 
 
 def _render_quiz(output: StudyOutput) -> None:
-    selections: dict[int, str] = {}
+    selections: dict[int, str | None] = {}
     with st.form("quiz_answers"):
         for index, item in enumerate(output.items, start=1):
-            choices = list(dict.fromkeys([*item.choices, item.answer]))
             selections[index] = st.radio(
                 f"{index}. {item.prompt}",
-                choices or [item.answer],
+                _quiz_choices(item, index),
+                index=None,
                 key=f"quiz_choice_{index}",
             )
-        submitted = st.form_submit_button("Review Answers")
+        submitted = st.form_submit_button("Submit Answers", type="primary")
 
-    if submitted:
-        for index, item in enumerate(output.items, start=1):
-            selected = selections[index]
-            correct = selected.strip().lower() == item.answer.strip().lower()
-            st.write(f"**{index}. {'Correct' if correct else 'Review'}**")
-            st.write(f"Answer: {item.answer}")
+    if not submitted:
+        return
+
+    correct_count = 0
+    for index, item in enumerate(output.items, start=1):
+        selected = selections[index]
+        is_correct = bool(selected) and selected.strip().lower() == item.answer.strip().lower()
+        if is_correct:
+            correct_count += 1
+            st.success(f"{index}. Correct  ·  {item.prompt}")
+        elif selected:
+            st.error(f"{index}. Incorrect  ·  {item.prompt}")
+        else:
+            st.error(f"{index}. Not answered  ·  {item.prompt}")
+
+        st.markdown(f"**Correct answer:** {item.answer}")
+        if selected and not is_correct:
+            st.markdown(f"**Your answer:** {selected}")
+        if item.explanation and item.explanation != item.answer:
             st.write(item.explanation)
-            _render_item_sources(item, output.source_snippets)
+        _render_item_sources(item, output.source_snippets)
+        st.divider()
+
+    st.info(f"Score: {correct_count} / {len(output.items)} correct")
+
+
+def _quiz_choices(item: StudyItem, seed: int) -> list[str]:
+    """Deduplicate choices (ensuring the answer is present) and shuffle them
+    deterministically so the correct option isn't always in the same spot but
+    the order stays stable across reruns within a generated set."""
+    choices = list(dict.fromkeys([*item.choices, item.answer]))
+    if not choices:
+        choices = [item.answer]
+    random.Random(seed).shuffle(choices)
+    return choices
 
 
 def _render_flashcards(items: list[StudyItem], source_snippets: dict[str, str]) -> None:
