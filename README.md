@@ -19,7 +19,7 @@ This project is built for the SDEV378 Applied AI final project standard: a funct
 
 3. **LLM study generation**
    - GroqCloud runs `llama-3.1-8b-instant` by default.
-   - The generator receives retrieved snippets and produces quiz questions, flashcards, or explanations grounded in those snippets.
+   - The generator receives retrieved snippets and produces quiz questions, flashcards, explanations, or open-response Q&A grounded in those snippets.
    - Output: structured study content plus source references.
 
 ## Happy Path
@@ -27,7 +27,7 @@ This project is built for the SDEV378 Applied AI final project standard: a funct
 1. Upload or paste course material.
 2. Preview extracted text and fix it if needed.
 3. Build a local semantic index.
-4. Choose quiz, flashcards, or explanation mode.
+4. Choose quiz, flashcards, explanation, or Q&A mode.
 5. Generate study output using retrieved snippets.
 6. Answer quiz questions and review explanations tied back to source text.
 

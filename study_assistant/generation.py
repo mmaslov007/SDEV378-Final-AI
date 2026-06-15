@@ -11,7 +11,7 @@ from study_assistant.config import DEFAULT_GROQ_MODEL
 from study_assistant.retrieval import SearchResult
 
 
-SUPPORTED_MODES = {"quiz", "flashcards", "explanation"}
+SUPPORTED_MODES = {"quiz", "flashcards", "explanation", "qa"}
 
 
 @dataclass(slots=True)
@@ -168,6 +168,8 @@ def _user_prompt(
         "For quiz mode, create multiple-choice questions with exactly four choices. "
         "For flashcards mode, use front/back fields. "
         "For explanation mode, create concise explanations with key points. "
+        "For qa mode, write an open-response question in 'question' and a complete, "
+        "source-grounded answer in 'answer', with a short 'explanation' of why it is correct. "
         "Every item must include one or more source ids from the snippets.\n\n"
         f"JSON schema example:\n{json.dumps(schema)}\n\n"
         f"Source snippets:\n{snippets}"
@@ -234,6 +236,8 @@ def _normalize_item(item: dict[str, Any], *, mode: str, source_snippets: dict[st
         prompt = question or front or heading
     elif mode == "flashcards":
         prompt = front or question or heading
+    elif mode == "qa":
+        prompt = question or heading or front
     else:
         prompt = heading or question or front or _title_for_mode(mode)
 
@@ -286,6 +290,17 @@ def _fallback_output(
                     back=sentence,
                     answer=sentence,
                     explanation=f"Derived from {source_id}.",
+                    sources=[source_id],
+                )
+            )
+        elif mode == "qa":
+            question = f"What key idea does {source_id} describe?"
+            items.append(
+                StudyItem(
+                    kind=mode,
+                    prompt=question,
+                    answer=sentence,
+                    explanation=f"{source_id} directly supports this answer.",
                     sources=[source_id],
                 )
             )
@@ -369,4 +384,6 @@ def _title_for_mode(mode: str) -> str:
         return "Source-Grounded Quiz"
     if mode == "flashcards":
         return "Source-Grounded Flashcards"
+    if mode == "qa":
+        return "Source-Grounded Q&A"
     return "Source-Grounded Explanation"

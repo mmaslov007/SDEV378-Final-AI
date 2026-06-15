@@ -84,6 +84,46 @@ class GenerationTests(unittest.TestCase):
         self.assertIn("GROQ_API_KEY", output.warnings[0])
         self.assertGreaterEqual(len(output.items), 1)
 
+    def test_qa_mode_uses_question_and_answer_fields(self):
+        content = """
+        {
+          "title": "Embedding Q&A",
+          "items": [
+            {
+              "question": "What do embeddings convert text into?",
+              "answer": "Vectors used for semantic retrieval.",
+              "explanation": "The source states embeddings convert text into vectors.",
+              "sources": ["S1"]
+            }
+          ]
+        }
+        """
+        output = generate_study_output(
+            mode="qa",
+            topic="embeddings",
+            results=sample_results(),
+            client=FakeGroqClient(content),
+        )
+
+        self.assertEqual(output.mode, "qa")
+        self.assertTrue(output.used_llm)
+        self.assertEqual(output.items[0].prompt, "What do embeddings convert text into?")
+        self.assertEqual(output.items[0].answer, "Vectors used for semantic retrieval.")
+
+    def test_qa_mode_fallback_without_api_key(self):
+        output = generate_study_output(
+            mode="qa",
+            topic="OCR",
+            results=sample_results(),
+            api_key="",
+        )
+
+        self.assertEqual(output.mode, "qa")
+        self.assertFalse(output.used_llm)
+        self.assertGreaterEqual(len(output.items), 1)
+        self.assertTrue(output.items[0].prompt)
+        self.assertTrue(output.items[0].answer)
+
 
 if __name__ == "__main__":
     unittest.main()

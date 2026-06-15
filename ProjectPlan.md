@@ -68,7 +68,7 @@ The stack keeps most processing local and free. GroqCloud will be used through o
 * Upload or paste study material.  
 * Extract and preview text.  
 * Index content for semantic search.  
-* Generate multiple-choice questions, flashcards, or explanations.  
+* Generate multiple-choice questions, flashcards, explanations, or open-response Q&A.  
 * Show the source snippets used for each response.
 
 # **Happy Path Demo**

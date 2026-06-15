@@ -11,6 +11,7 @@ from study_assistant.retrieval import SearchResult, build_index
 
 
 SAMPLE_PATH = Path("sample_materials/sdev378_ai_study_notes.txt")
+MODE_LABELS = {"quiz": "Quiz", "flashcards": "Flashcards", "explanation": "Explanation", "qa": "Q&A"}
 
 
 def main() -> None:
@@ -60,8 +61,9 @@ def _render_sidebar(config) -> dict[str, str | int | bool]:
         st.header("Settings")
         mode = st.segmented_control(
             "Mode",
-            ["quiz", "flashcards", "explanation"],
+            ["quiz", "flashcards", "explanation", "qa"],
             default="quiz",
+            format_func=lambda value: MODE_LABELS.get(value, value),
         )
         topic = st.text_input("Topic", placeholder="retrieval, OCR, final project standards")
         difficulty = st.selectbox("Difficulty", ["easy", "medium", "hard"], index=1)
@@ -220,6 +222,8 @@ def _render_output(output: StudyOutput) -> None:
         _render_quiz(output)
     elif output.mode == "flashcards":
         _render_flashcards(output.items, output.source_snippets)
+    elif output.mode == "qa":
+        _render_qa(output.items, output.source_snippets)
     else:
         _render_explanations(output.items, output.source_snippets)
 
@@ -251,6 +255,16 @@ def _render_flashcards(items: list[StudyItem], source_snippets: dict[str, str]) 
         front = item.front or item.prompt
         with st.expander(f"{index}. {front}", expanded=index == 1):
             st.write(item.back or item.answer)
+            if item.explanation and item.explanation != item.answer:
+                st.caption(item.explanation)
+            _render_item_sources(item, source_snippets)
+
+
+def _render_qa(items: list[StudyItem], source_snippets: dict[str, str]) -> None:
+    for index, item in enumerate(items, start=1):
+        st.markdown(f"#### {index}. {item.prompt}")
+        with st.expander("Show answer", expanded=False):
+            st.write(item.answer)
             if item.explanation and item.explanation != item.answer:
                 st.caption(item.explanation)
             _render_item_sources(item, source_snippets)
