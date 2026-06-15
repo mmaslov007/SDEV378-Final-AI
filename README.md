@@ -22,6 +22,12 @@ This project is built for the SDEV378 Applied AI final project standard: a funct
    - The generator receives retrieved snippets and produces quiz questions, flashcards, explanations, or open-response Q&A grounded in those snippets.
    - Output: structured study content plus source references.
 
+4. **Topic and difficulty classification**
+   - GroqCloud labels the material with topics and an overall difficulty, with a
+     local heuristic fallback (keyword frequency plus a Flesch readability proxy)
+     when no API key is set.
+   - Output: detected topics that seed retrieval and a suggested difficulty.
+
 ## Happy Path
 
 1. Upload or paste course material.

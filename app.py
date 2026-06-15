@@ -4,6 +4,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from study_assistant.classification import DocumentTags, classify_document
 from study_assistant.config import load_config
 from study_assistant.extraction import ExtractedDocument, extract_from_bytes, extract_from_plain_text, is_tesseract_available
 from study_assistant.generation import StudyItem, StudyOutput, generate_study_output
@@ -46,6 +47,7 @@ def _initialize_state() -> None:
     defaults = {
         "extracted_doc": None,
         "text_preview": "",
+        "doc_tags": None,
         "retrieval_results": [],
         "study_output": None,
         "chunks": [],
@@ -133,6 +135,16 @@ def _store_extraction(document: ExtractedDocument) -> None:
     st.session_state.index_backend = ""
     st.session_state.index_warnings = []
 
+    if document.has_text:
+        config = load_config()
+        st.session_state.doc_tags = classify_document(
+            document.text,
+            api_key=config.groq_api_key,
+            model=config.groq_model,
+        )
+    else:
+        st.session_state.doc_tags = None
+
 
 def _render_preview_panel() -> None:
     document: ExtractedDocument | None = st.session_state.get("extracted_doc")
@@ -143,6 +155,12 @@ def _render_preview_panel() -> None:
         metric_columns[2].metric("Characters", document.character_count)
         for warning in document.warnings:
             st.warning(warning)
+
+    tags: DocumentTags | None = st.session_state.get("doc_tags")
+    if tags and tags.has_topics:
+        method = "AI" if tags.used_llm else "auto"
+        st.caption(f"Detected topics ({method}): " + " · ".join(tags.topics))
+        st.caption(f"Suggested difficulty: {tags.difficulty}")
 
     st.text_area("Preview", key="text_preview", height=260)
 
@@ -188,7 +206,7 @@ def _build_search_index(settings: dict[str, str | int | bool], config) -> None:
     document: ExtractedDocument | None = st.session_state.get("extracted_doc")
     source_name = document.source_name if document else "study-material"
     text = st.session_state.get("text_preview", "")
-    query = str(settings["topic"]).strip() or "important study concepts"
+    query = str(settings["topic"]).strip() or _detected_topic_query()
 
     store, chunks, warnings = build_index(
         text,
@@ -206,6 +224,13 @@ def _build_search_index(settings: dict[str, str | int | bool], config) -> None:
     st.session_state.index_backend = store.backend_name
     st.session_state.index_warnings = warnings
     st.session_state.study_output = None
+
+
+def _detected_topic_query() -> str:
+    tags: DocumentTags | None = st.session_state.get("doc_tags")
+    if tags and tags.has_topics:
+        return " ".join(tags.topics[:3])
+    return "important study concepts"
 
 
 def _render_output(output: StudyOutput) -> None:
