@@ -86,7 +86,7 @@ def _status_items(config) -> list[tuple[str, str, str]]:
 
 
 def _render_config_panel() -> dict[str, str | int | bool]:
-    ui.section_header("⚙️", "Configure", "Step 3 · Choose your study mode and tuning")
+    ui.section_header(ui.ICON_CONFIGURE, "Configure", "Step 3 · Choose your study mode and tuning")
     mode = st.segmented_control(
         "Mode",
         ["quiz", "flashcards", "explanation", "qa"],
@@ -124,7 +124,7 @@ def _render_config_panel() -> dict[str, str | int | bool]:
 
 
 def _render_input_panel() -> None:
-    ui.section_header("📥", "Material", "Step 1 · Upload a file or paste your notes")
+    ui.section_header(ui.ICON_UPLOAD, "Material", "Step 1 · Upload a file or paste your notes")
     uploaded_file = st.file_uploader(
         "Upload",
         type=["pdf", "docx", "png", "jpg", "jpeg", "txt", "md", "csv"],
@@ -175,7 +175,7 @@ def _store_extraction(document: ExtractedDocument) -> None:
 
 
 def _render_preview_panel() -> None:
-    ui.section_header("👁️", "Preview", "Step 2 · Review extracted text and detected topics")
+    ui.section_header(ui.ICON_PREVIEW, "Preview", "Step 2 · Review extracted text and detected topics")
     document: ExtractedDocument | None = st.session_state.get("extracted_doc")
     if document:
         metric_columns = st.columns(3)
@@ -198,7 +198,7 @@ def _render_preview_panel() -> None:
 
 
 def _render_pipeline_panel(settings: dict[str, str | int | bool], config) -> None:
-    ui.section_header("⚡", "Generate", "Step 4 · Build the index, then create your study set")
+    ui.section_header(ui.ICON_GENERATE, "Generate", "Step 4 · Build the index, then create your study set")
 
     build_disabled = not bool(st.session_state.get("text_preview", "").strip())
     if st.button("Build Search Index", disabled=build_disabled, use_container_width=True, type="primary"):
@@ -270,7 +270,7 @@ def _detected_topic_query() -> str:
 
 
 def _render_output(output: StudyOutput) -> None:
-    ui.section_header("🎓", output.title, "Step 5 · Your generated study set")
+    ui.section_header(ui.ICON_RESULTS, output.title, "Step 5 · Your generated study set")
     status_columns = st.columns(3)
     status_columns[0].metric("Mode", MODE_LABELS.get(output.mode, output.mode))
     status_columns[1].metric("Items", len(output.items))

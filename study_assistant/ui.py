@@ -40,6 +40,32 @@ _LOGO_SVG = """
 """
 
 
+def _icon(paths: str) -> str:
+    """Wrap line-art SVG path markup in a consistent 24x24 stroked icon."""
+    return (
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" '
+        f'stroke-linecap="round" stroke-linejoin="round">{paths}</svg>'
+    )
+
+
+# Minimalist line icons for the section headers (stroke = currentColor).
+ICON_UPLOAD = _icon('<path d="M12 15V4"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/>'
+                     '<path d="M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15"/>')
+ICON_PREVIEW = _icon('<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/>'
+                     '<circle cx="12" cy="12" r="3"/>')
+ICON_CONFIGURE = _icon('<line x1="21" x2="14" y1="5" y2="5"/><line x1="10" x2="3" y1="5" y2="5"/>'
+                       '<line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/>'
+                       '<line x1="21" x2="16" y1="19" y2="19"/><line x1="12" x2="3" y1="19" y2="19"/>'
+                       '<line x1="14" x2="14" y1="3" y2="7"/><line x1="8" x2="8" y1="10" y2="14"/>'
+                       '<line x1="16" x2="16" y1="17" y2="21"/>')
+ICON_GENERATE = _icon('<path d="M12 3 13.9 8.6a2 2 0 0 0 1.5 1.3L21 11l-5.6 1.9a2 2 0 0 0-1.3 1.5L12 20l-1.9-5.6'
+                      'a2 2 0 0 0-1.3-1.5L3 11l5.6-1.1a2 2 0 0 0 1.5-1.3Z"/>'
+                      '<path d="M19 4v3"/><path d="M20.5 5.5h-3"/>')
+ICON_RESULTS = _icon('<path d="M12 7v13"/>'
+                     '<path d="M3 17V5a1 1 0 0 1 1-1h5a3 3 0 0 1 3 3 3 3 0 0 1 3-3h5a1 1 0 0 1 1 1v12'
+                     'a1 1 0 0 1-1 1h-6a2 2 0 0 0-2 2 2 2 0 0 0-2-2H4a1 1 0 0 1-1-1Z"/>')
+
+
 def inject_global_styles() -> None:
     """Inject fonts and the global stylesheet. Call once near the top of the page."""
     st.markdown(_GLOBAL_CSS, unsafe_allow_html=True)
@@ -52,8 +78,9 @@ def render_nav(status_items: list[tuple[str, str, str]]) -> None:
     one of ``"ok"`` (emerald), ``"off"`` (muted) or ``"neutral"`` (ink).
     """
     stats = "".join(
-        f'<div class="nav-stat"><span class="ns-k">{label}</span>'
-        f'<span class="ns-v {state}">{value}</span></div>'
+        f'<div class="nav-stat"><span class="ns-dot {state}"></span>'
+        f'<span class="nav-stat-text"><span class="ns-k">{label}</span>'
+        f'<span class="ns-v {state}">{value}</span></span></div>'
         for label, value, state in status_items
     )
     st.markdown(
@@ -209,7 +236,14 @@ html { scroll-behavior: smooth; }
 }
 .nav-brand:hover { opacity: 0.85; }
 .nav-stats { display: flex; align-items: center; gap: 1.5rem; margin-left: auto; }
-.nav-stat { display: flex; flex-direction: column; line-height: 1.15; }
+.nav-stat { display: flex; align-items: center; gap: 0.5rem; line-height: 1.15; }
+.nav-stat-text { display: flex; flex-direction: column; line-height: 1.15; }
+.ns-dot {
+  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+  background: #CBC4B6; transition: background 0.2s ease;
+}
+.ns-dot.ok { background: var(--emerald); box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.18); }
+.ns-dot.off, .ns-dot.neutral { background: #CBC4B6; }
 .ns-k { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
 .ns-v { font-size: 0.82rem; font-weight: 700; color: var(--ink); }
 .ns-v.ok { color: var(--emerald); }
@@ -258,9 +292,10 @@ html { scroll-behavior: smooth; }
 .section-head { display: flex; align-items: center; gap: 0.7rem; margin: 0.1rem 0 0.9rem; }
 .section-icon {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 40px; height: 40px; border-radius: 12px; font-size: 1.15rem;
+  width: 40px; height: 40px; border-radius: 12px; color: var(--emerald);
   background: rgba(5, 150, 105, 0.09); border: 1px solid rgba(5, 150, 105, 0.22);
 }
+.section-icon svg { width: 20px; height: 20px; display: block; }
 .section-titles { display: flex; flex-direction: column; line-height: 1.2; }
 .section-title { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 1.15rem; color: var(--ink); }
 .section-sub { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
