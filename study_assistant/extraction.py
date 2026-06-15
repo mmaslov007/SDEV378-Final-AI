@@ -12,6 +12,8 @@ from typing import Any
 
 TEXT_EXTENSIONS = {".txt", ".md", ".markdown", ".csv"}
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
+DOCX_EXTENSION = ".docx"
+LEGACY_DOC_EXTENSION = ".doc"
 COMMON_TESSERACT_PATHS = (
     Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe"),
     Path(r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe"),
@@ -82,10 +84,32 @@ def extract_from_plain_text(text: str, source_name: str = "pasted notes") -> Ext
 def extract_from_bytes(file_name: str, content: bytes) -> ExtractedDocument:
     suffix = Path(file_name).suffix.lower()
 
+    if not content:
+        return ExtractedDocument(
+            source_name=file_name,
+            source_type="empty",
+            text="",
+            warnings=["The uploaded file was empty."],
+            metadata={"extension": suffix, "bytes": 0},
+        )
+
     if suffix in TEXT_EXTENSIONS or not suffix:
         return _extract_text_file(file_name, content)
     if suffix == ".pdf":
         return _extract_pdf(file_name, content)
+    if suffix == DOCX_EXTENSION:
+        return _extract_docx(file_name, content)
+    if suffix == LEGACY_DOC_EXTENSION:
+        return ExtractedDocument(
+            source_name=file_name,
+            source_type="unsupported",
+            text="",
+            warnings=[
+                "Legacy .doc files are not supported. Open the file in Word and save it as .docx, "
+                "then upload again."
+            ],
+            metadata={"extension": suffix},
+        )
     if suffix in IMAGE_EXTENSIONS:
         return _extract_image(file_name, content)
 
@@ -137,6 +161,17 @@ def _extract_pdf(file_name: str, content: bytes) -> ExtractedDocument:
 
     try:
         with fitz.open(stream=content, filetype="pdf") as document:
+            if document.needs_pass and not document.authenticate(""):
+                return ExtractedDocument(
+                    source_name=file_name,
+                    source_type="pdf",
+                    text="",
+                    warnings=[
+                        "This PDF is password protected. Remove the password and upload it again."
+                    ],
+                    metadata={"pages": 0, "encrypted": True},
+                )
+
             for page_index, page in enumerate(document, start=1):
                 page_text = normalize_text(page.get_text("text"))
                 if page_text:
@@ -172,6 +207,55 @@ def _extract_pdf(file_name: str, content: bytes) -> ExtractedDocument:
         text=text,
         warnings=warnings,
         metadata={"pages": page_count, "ocr_pages": ocr_pages, "characters": len(text)},
+    )
+
+
+def _extract_docx(file_name: str, content: bytes) -> ExtractedDocument:
+    try:
+        import docx  # type: ignore[import-not-found]
+    except ImportError:
+        return ExtractedDocument(
+            source_name=file_name,
+            source_type="docx",
+            text="",
+            warnings=["python-docx is not installed, so Word extraction is unavailable."],
+            metadata={"paragraphs": 0, "tables": 0},
+        )
+
+    from io import BytesIO
+
+    warnings: list[str] = []
+    try:
+        document = docx.Document(BytesIO(content))
+    except Exception as exc:
+        return ExtractedDocument(
+            source_name=file_name,
+            source_type="docx",
+            text="",
+            warnings=[f"Word extraction failed: {exc}"],
+            metadata={"paragraphs": 0, "tables": 0},
+        )
+
+    parts: list[str] = [paragraph.text for paragraph in document.paragraphs if paragraph.text.strip()]
+
+    table_count = 0
+    for table in document.tables:
+        table_count += 1
+        for row in table.rows:
+            cells = [cell.text.strip() for cell in row.cells]
+            if any(cells):
+                parts.append("\t".join(cells))
+
+    text = normalize_text("\n\n".join(parts))
+    if not text:
+        warnings.append("No readable text was found in the Word document.")
+
+    return ExtractedDocument(
+        source_name=file_name,
+        source_type="docx",
+        text=text,
+        warnings=warnings,
+        metadata={"paragraphs": len(document.paragraphs), "tables": table_count, "characters": len(text)},
     )
 
 

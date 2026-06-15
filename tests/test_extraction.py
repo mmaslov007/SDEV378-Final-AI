@@ -1,4 +1,6 @@
+import importlib.util
 import unittest
+from io import BytesIO
 
 from study_assistant.extraction import (
     extract_from_bytes,
@@ -7,6 +9,8 @@ from study_assistant.extraction import (
     is_tesseract_available,
     normalize_text,
 )
+
+DOCX_AVAILABLE = importlib.util.find_spec("docx") is not None
 
 
 class ExtractionTests(unittest.TestCase):
@@ -35,6 +39,39 @@ class ExtractionTests(unittest.TestCase):
         self.assertFalse(result.has_text)
         self.assertEqual(result.source_type, "unsupported")
         self.assertIn("Unsupported file type", result.warnings[0])
+
+    def test_empty_file_returns_warning(self):
+        result = extract_from_bytes("notes.txt", b"")
+
+        self.assertFalse(result.has_text)
+        self.assertEqual(result.source_type, "empty")
+        self.assertIn("empty", result.warnings[0].lower())
+
+    def test_legacy_doc_directs_user_to_docx(self):
+        result = extract_from_bytes("notes.doc", b"\xd0\xcf\x11\xe0legacy")
+
+        self.assertFalse(result.has_text)
+        self.assertEqual(result.source_type, "unsupported")
+        self.assertIn(".docx", result.warnings[0])
+
+    @unittest.skipUnless(DOCX_AVAILABLE, "python-docx is not installed")
+    def test_extract_docx_reads_paragraphs_and_tables(self):
+        import docx
+
+        document = docx.Document()
+        document.add_paragraph("Embeddings convert text into vectors.")
+        table = document.add_table(rows=1, cols=2)
+        table.rows[0].cells[0].text = "OCR"
+        table.rows[0].cells[1].text = "Reads images"
+        buffer = BytesIO()
+        document.save(buffer)
+
+        result = extract_from_bytes("study_notes.docx", buffer.getvalue())
+
+        self.assertEqual(result.source_type, "docx")
+        self.assertIn("Embeddings convert text into vectors.", result.text)
+        self.assertIn("Reads images", result.text)
+        self.assertEqual(result.metadata["tables"], 1)
 
     def test_tesseract_probe_returns_boolean(self):
         self.assertIsInstance(is_tesseract_available(), bool)

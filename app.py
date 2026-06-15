@@ -95,7 +95,7 @@ def _render_input_panel() -> None:
     st.subheader("Material")
     uploaded_file = st.file_uploader(
         "Upload",
-        type=["pdf", "png", "jpg", "jpeg", "txt", "md", "csv"],
+        type=["pdf", "docx", "png", "jpg", "jpeg", "txt", "md", "csv"],
     )
     pasted_text = st.text_area("Paste", height=180, placeholder="Paste notes, slides text, or a reading excerpt.")
 

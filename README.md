@@ -8,6 +8,7 @@ This project is built for the SDEV378 Applied AI final project standard: a funct
 
 1. **Document extraction and OCR**
    - `PyMuPDF` extracts selectable PDF text locally.
+   - `python-docx` reads Word `.docx` files, including text in tables.
    - `pytesseract` can OCR image uploads and PDF pages that do not contain extractable text.
    - Output: normalized study text plus extraction diagnostics.
 
