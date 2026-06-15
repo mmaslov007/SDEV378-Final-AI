@@ -59,10 +59,8 @@ def render_nav(status_items: list[tuple[str, str, str]]) -> None:
     st.markdown(
         f"""
         <div class="topnav">
-          <div class="nav-right">
-            <div class="nav-stats">{stats}</div>
-            <div class="nav-brand">{_LOGO_SVG}<span>StudyAI</span></div>
-          </div>
+          <a class="nav-brand" href="#home">{_LOGO_SVG}<span>StudyAI</span></a>
+          <div class="nav-stats">{stats}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -171,6 +169,8 @@ _GLOBAL_CSS = """
 html, body, [class*="css"], .stApp, .stMarkdown, p, span, div, label, input, textarea {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
+/* Kill any sideways scroll */
+html, body, .stApp, [data-testid="stMain"], [data-testid="stAppViewContainer"] { overflow-x: hidden !important; max-width: 100%; }
 .stApp {
   background:
     radial-gradient(1000px 480px at 12% -10%, rgba(16, 185, 129, 0.10), transparent 60%),
@@ -179,44 +179,45 @@ html, body, [class*="css"], .stApp, .stMarkdown, p, span, div, label, input, tex
 }
 h1, h2, h3, h4 { font-family: 'Plus Jakarta Sans', 'Inter', sans-serif; color: var(--ink); letter-spacing: -0.01em; }
 
-/* Smooth in-page anchor scrolling, with offset so the sticky nav never covers a section */
+/* Smooth in-page anchor scrolling, with offset so the fixed nav never covers a section */
 html { scroll-behavior: smooth; }
 [data-testid="stMain"], section.main { scroll-behavior: smooth; }
-.anchor { position: relative; top: -84px; visibility: hidden; height: 0; }
+.anchor { position: relative; top: -88px; visibility: hidden; height: 0; }
 
-/* Hide the Streamlit sidebar entirely — controls live in the page now */
+/* Hide the Streamlit sidebar + header chrome — our nav and controls live in the page */
 [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"],
 [data-testid="collapsedControl"], [data-testid="stSidebarCollapseButton"] { display: none !important; }
 [data-testid="stHeader"] { display: none; }
+[data-testid="stToolbar"] { display: none; }
 
-.block-container { padding-top: 0; padding-bottom: 4rem; max-width: 940px; }
+/* Push page content below the fixed nav */
+.block-container { padding-top: 5.5rem !important; padding-bottom: 4rem; max-width: 940px; }
 
-/* Full-bleed sticky top nav ----------------------------------------- */
+/* Fixed full-width top nav ------------------------------------------ */
 .topnav {
-  position: sticky; top: 0; z-index: 1000;
-  width: 100vw; margin-left: calc(50% - 50vw);
-  display: flex; align-items: center;
-  padding: 0.7rem clamp(1rem, 5vw, 3rem);
-  margin-bottom: 1.6rem;
-  background: rgba(255, 253, 249, 0.88); backdrop-filter: blur(12px);
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  display: flex; align-items: center; gap: 1.5rem;
+  height: 68px; padding: 0 clamp(1.1rem, 5vw, 3rem);
+  background: rgba(255, 253, 249, 0.92); backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
-  box-shadow: 0 6px 20px -16px rgba(23, 24, 26, 0.35);
+  box-shadow: 0 4px 22px -16px rgba(23, 24, 26, 0.4);
 }
-.nav-right { display: flex; align-items: center; gap: 1.6rem; margin-left: auto; }
-.nav-stats { display: flex; align-items: center; gap: 1.4rem; }
+.nav-brand {
+  display: inline-flex; align-items: center; gap: 0.55rem; text-decoration: none !important;
+  font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 1.2rem; color: var(--ink) !important;
+  cursor: pointer;
+}
+.nav-brand:hover { opacity: 0.85; }
+.nav-stats { display: flex; align-items: center; gap: 1.5rem; margin-left: auto; }
 .nav-stat { display: flex; flex-direction: column; line-height: 1.15; }
 .ns-k { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
 .ns-v { font-size: 0.82rem; font-weight: 700; color: var(--ink); }
 .ns-v.ok { color: var(--emerald); }
 .ns-v.off { color: var(--muted); }
 .ns-v.neutral { color: var(--ink); }
-.nav-brand {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 1.15rem; color: var(--ink);
-  padding-left: 1.4rem; border-left: 1px solid var(--border);
-}
 @media (max-width: 720px) {
-  .nav-stats { display: none; }
+  .nav-stats { gap: 0.9rem; }
+  .nav-stat:nth-child(3) { display: none; }
 }
 
 /* Hero --------------------------------------------------------------- */
