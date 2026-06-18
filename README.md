@@ -1,106 +1,132 @@
-# AI Study Assistant Quiz Generator
+# StudyAI — AI Study Assistant
 
-An AI-enabled Streamlit study assistant that turns course materials into source-grounded quizzes, flashcards, explanations, and review snippets.
+StudyAI turns your own course materials into **source-grounded** study sets —
+quizzes, flashcards, explanations, and open-response Q&A. Upload a PDF, Word
+document, image, or pasted notes; the app extracts the text, finds the passages
+most relevant to your topic, and uses a language model to generate study content
+where **every answer is traced back to the snippet it came from**.
 
-This project is built for the SDEV378 Applied AI final project standard: a functional proof of concept with at least three ML-based components working together in a meaningful way.
+Built for the SDEV378 Applied AI final project: a working proof of concept with
+three ML components cooperating end to end (extraction → retrieval →
+generation), plus an optional fourth (automatic topic and difficulty tagging).
 
-## ML Components
+**Team:** Maxwell Maslov, Huma Khomidov
 
-1. **Document extraction and OCR**
-   - `PyMuPDF` extracts selectable PDF text locally.
-   - `python-docx` reads Word `.docx` files, including text in tables.
-   - `pytesseract` can OCR image uploads and PDF pages that do not contain extractable text.
-   - Output: normalized study text plus extraction diagnostics.
+---
 
-2. **Semantic retrieval**
-   - `sentence-transformers/all-MiniLM-L6-v2` creates local embeddings.
-   - `ChromaDB` stores and searches chunks from the user's uploaded or pasted materials.
-   - Output: source chunks ranked by semantic relevance.
+## Features
 
-3. **LLM study generation**
-   - GroqCloud runs `llama-3.1-8b-instant` by default.
-   - The generator receives retrieved snippets and produces quiz questions, flashcards, explanations, or open-response Q&A grounded in those snippets.
-   - Output: structured study content plus source references.
+- **Multiple input types** — PDF, Word (`.docx`), images (`.png/.jpg/...`), `.txt` / `.md` / `.csv`, or pasted text.
+- **Four study modes** — multiple-choice **quiz**, **flashcards**, **explanations**, and open-response **Q&A**.
+- **Grounded answers** — the model may only use passages retrieved from *your* material, and each item links to its source snippet.
+- **Automatic tagging** — detects topics and a suggested difficulty to seed retrieval.
+- **Graceful degradation** — without an API key it still extracts, indexes, retrieves, and shows the relevant source passages.
+- **Local-first** — text extraction, embeddings, and vector search all run on your machine; only generation calls a hosted LLM.
 
-4. **Topic and difficulty classification**
-   - GroqCloud labels the material with topics and an overall difficulty, with a
-     local heuristic fallback (keyword frequency plus a Flesch readability proxy)
-     when no API key is set.
-   - Output: detected topics that seed retrieval and a suggested difficulty.
+## How it works
 
-## Happy Path
+| Stage | Technology | Role |
+|---|---|---|
+| **1. Extraction** | PyMuPDF, python-docx, pytesseract (optional) | Read PDFs, Word files, text files, and OCR images/scanned pages into clean text |
+| **2. Retrieval** | sentence-transformers (`all-MiniLM-L6-v2`) + ChromaDB | Chunk the text, embed it locally, and search for the passages most relevant to your topic |
+| **3. Generation** | GroqCloud (`llama-3.1-8b-instant`) | Write quizzes, flashcards, explanations, and Q&A grounded strictly in the retrieved snippets |
+| **4. Classification** *(optional)* | Groq, or a local keyword + readability heuristic | Tag topics and an overall difficulty for the document |
 
-1. Upload or paste course material.
-2. Preview extracted text and fix it if needed.
-3. Build a local semantic index.
-4. Choose quiz, flashcards, explanation, or Q&A mode.
-5. Generate study output using retrieved snippets.
-6. Answer quiz questions and review explanations tied back to source text.
+---
 
-## Setup From GitHub
+## Requirements
 
-Clone the repository and enter the project folder:
+- **Python 3.10+**
+- A free **GroqCloud API key** (optional, but required for AI-generated content)
+- **Tesseract OCR** (optional, only for reading images and scanned PDFs)
+
+## Setup
+
+### 1. Clone and install dependencies
 
 ```powershell
 git clone https://github.com/mmaslov007/SDEV378-Final-AI.git
 cd SDEV378-Final-AI
-```
 
-Create and activate a virtual environment:
-
-```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-Create your local environment file:
+> All packages install into the local `.venv` folder only — nothing is installed
+> system-wide.
+
+### 2. Configure your environment
 
 ```powershell
 copy .env.example .env
 ```
 
-Add your Groq API key to `.env`. Never commit this file:
+Edit `.env` and add your Groq API key (never commit this file):
 
-```text
-GROQ_API_KEY=your_key_here
-```
+| Variable | Required | Description |
+|---|---|---|
+| `GROQ_API_KEY` | For AI generation | Your GroqCloud key. Without it, the app runs in source-only fallback mode. |
+| `GROQ_MODEL` | No | LLM model id (default: `llama-3.1-8b-instant`). |
+| `STUDY_ASSISTANT_CHROMA_PATH` | No | Where ChromaDB stores its local index (default: `.chroma`). |
+| `TESSERACT_CMD` | No | Path to `tesseract.exe`, only if it isn't on your `PATH`. |
 
-Install Tesseract OCR for image uploads and scanned PDFs. On Windows, use one of these package-manager options:
+### 3. (Optional) Install Tesseract for image OCR
+
+Only needed for **scanned images or picture-only PDFs**. Normal PDFs, Word
+documents, text files, and pasted notes work without it.
 
 ```powershell
+# Windows
 winget install --id tesseract-ocr.tesseract --exact --accept-source-agreements --accept-package-agreements
 ```
 
-```powershell
-choco install tesseract -y
-```
-
-Close and reopen PowerShell after installing Tesseract so PATH refreshes. If OCR still shows as unavailable, set the executable path in `.env`:
-
-```text
-TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
-```
-
-For macOS or Linux:
-
 ```bash
+# macOS / Linux
 brew install tesseract
 sudo apt-get install tesseract-ocr
 ```
 
-Run the app from the project virtual environment:
+Reopen your terminal afterward so `PATH` refreshes. If OCR still shows as
+unavailable, set `TESSERACT_CMD` in `.env`.
+
+---
+
+## Running the app
 
 ```powershell
 .\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
-The first semantic retrieval run may download the `sentence-transformers/all-MiniLM-L6-v2` model. Tesseract OCR is optional but recommended for images and scanned PDFs. If it is not installed, the app still supports pasted text and selectable PDF text.
+The app opens in your browser at `http://localhost:8501`. The first retrieval run
+downloads the MiniLM embedding model (~90 MB) into your local cache. Press
+`Ctrl+C` in the terminal to stop the server.
+
+### Using it — the happy path
+
+1. **Material** — upload a file, paste notes, or click **Load Sample**.
+2. **Extract Material** — pulls the text and shows an editable preview.
+3. **Configure** — choose a mode (quiz / flashcards / explanation / Q&A), topic, and difficulty.
+4. **Build Search Index** — chunks and indexes the text. *(Required before generating.)*
+5. **Generate Study Set** — produces the study content with linked sources.
+
+> **Generate** stays disabled until you build the index — that's the intended
+> order, not a bug.
+
+### Reading the status bar
+
+The top navigation shows live component status:
+
+| Indicator | Meaning |
+|---|---|
+| **OCR: off** | Tesseract isn't installed. Fine unless you need image/scanned-PDF OCR. |
+| **LLM: ready / off** | `ready` once `GROQ_API_KEY` is set; otherwise the app runs in fallback mode. |
+| **Retrieval: not built** | No index built *yet this session*. Flips to `chromadb` after you click **Build Search Index**. |
+
+---
 
 ## Validation
-
-Run the dependency-light checks:
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests
@@ -108,41 +134,38 @@ Run the dependency-light checks:
 .\.venv\Scripts\python.exe scripts\check_setup.py
 ```
 
-Run the Streamlit app:
+`check_setup.py` prints a quick diagnostic of installed dependencies, your Groq
+key status, and Tesseract availability.
 
-```powershell
-.\.venv\Scripts\python.exe -m streamlit run app.py
+## Project structure
+
 ```
-
-The app displays component status in the sidebar:
-
-- OCR is available only when local Tesseract is installed.
-- Retrieval uses ChromaDB and MiniLM when the full requirements are installed; otherwise it falls back to an in-memory hashing index.
-- Generation uses Groq when `GROQ_API_KEY` is configured; otherwise it shows source-grounded fallback study prompts.
+app.py                       Streamlit entry point (UI + page flow)
+study_assistant/
+  extraction.py              File/text extraction + OCR
+  retrieval.py               Chunking, embeddings, ChromaDB / in-memory search
+  generation.py              Groq-backed quiz/flashcard/explanation/Q&A generation
+  classification.py          Topic + difficulty tagging (LLM or heuristic)
+  config.py                  Environment configuration
+  ui.py                      Design system (theme, nav, hero, components)
+tests/                       Unit tests
+scripts/check_setup.py       Environment diagnostics
+sample_materials/            Demo content
+.streamlit/config.toml       Theme configuration
+```
 
 ## Troubleshooting
 
-If the app says `PyMuPDF is not installed`, it is running from the wrong Python environment. Stop any old Streamlit servers, then launch with the virtual environment command:
+- **"PyMuPDF is not installed"** — you're running from the wrong Python. Stop any old Streamlit servers and relaunch with `.\.venv\Scripts\python.exe -m streamlit run app.py`.
+- **OCR unavailable after installing Tesseract** — reopen your terminal, run `scripts\check_setup.py`, and set `TESSERACT_CMD` in `.env` if needed.
+- **Want a quick demo?** — use `sample_materials/sdev378_ai_study_notes.txt` via the **Load Sample** button.
 
-```powershell
-Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*streamlit*app.py*' -and $_.ProcessId -ne $PID } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
-.\.venv\Scripts\python.exe -m streamlit run app.py
-```
+---
 
-If OCR still says unavailable after installing Tesseract, run:
+## Privacy & data
 
-```powershell
-.\.venv\Scripts\python.exe scripts\check_setup.py
-```
-
-Then set `TESSERACT_CMD` in `.env` if needed.
-
-## Demo Material
-
-Use `sample_materials/sdev378_ai_study_notes.txt` for a reliable local demo without needing external files.
-
-## Project Review Fit
-
-- The interface is minimal but demo-ready.
-- The app completes the intended study workflow end to end.
-- The three AI components each do something distinct: OCR/extraction reads the material, embeddings retrieve the right parts, and the LLM creates study output from the retrieved evidence.
+StudyAI runs locally and writes only a `.chroma/` index folder and a cached
+embedding model to disk. The only outbound network calls are to **GroqCloud**
+(for generation) and **Hugging Face** (a one-time model download). Text you
+upload is sent to Groq's API to generate study content, so avoid uploading
+sensitive material.
